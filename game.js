@@ -9,16 +9,29 @@ function runGame() {
     const planeImage = new Image();
     planeImage.src = 'plane.png';
 
+    //-----
+    // All of the main variables are defined here.
+
+    // This is, of course, the pig!
+    // It has a location and a speed.
     const pig = {
         x: 484,
         y: 590,
         speed: 5
     };
 
+    // This is a list of the planes that are currently on the screen.
+    // They just have x and y coordinates.
     let planes = [];
 
+    // The score, which gets increased whenever you hit the end of the screen.
     let score = 0;
 
+    //-----
+    // The input controls.
+    // 'keys' keeps a record of which arrow keys are currently pressed.
+    //
+    // We listen for keyup and keydown events, and change the state of this object. 
     const keys = {
         up: false,
         down: false,
@@ -36,63 +49,74 @@ function runGame() {
     document.addEventListener('keydown', event => changeKeys(event.keyCode, true), false);
     document.addEventListener('keyup', event => changeKeys(event.keyCode, false), false);
 
+
+    // We need to wait for both images to be loaded before starting the game.
     pigImage.onload = function () {
         planeImage.onload = function() {
             begin();
         }
     }
 
-    var spawner;
-    var planeTime = 3000;
-
     function begin() {
-        spawnPlane();
+        spawnPlanes();
         loop();
     }
 
+    let spawner; // This is set to the timeout which spawns planes.
+    let planeTime = 3000; // milliseconds between planes appearing.
+
+    function spawnPlanes() {
+        spawnPlane();
+        spawner = setTimeout(spawnPlanes, planeTime);        
+    }
+
+    // Create a new plane and put it in the list of planes. 
     function spawnPlane() {
         planes.push({
             x: 1000,
             y: Math.random() * 400
         }); 
-
-        spawner = setTimeout(spawnPlane, planeTime);
     }
 
-    function loop() {
-        clear();
-        updatePig();
-        drawPig();
+    //-----
+    // The main game logic
 
-        planes.forEach(plane => {
-            updatePlane(plane);
-            drawPlane(plane);
-        });
+    function update() {
+        updatePig();
+        planes.forEach(updatePlane);
+        cullOffscreenPlanes();
+    }
+
+    function draw() {
+        clear();
+        drawPig();
+        planes.forEach(drawPlane);
+        drawScore();
+    }
+
+    // This is the main loop which happens on every frame.
+    function loop() {
+        update();
+        draw();
 
         if (planes.some(isHittingPig)) {
-            return gameOver();
-        }
-
-        cullPlanes();
-        drawScore();
-        
-        window.requestAnimationFrame(loop);
-    }
-
-    function clear() {
-        ctx.fillStyle = "lightblue";
-        ctx.fillRect(0, 0, 1000, 600);
+            gameOver();
+        } else {
+            window.requestAnimationFrame(loop);
+        }        
     }
 
     function updatePig() {
         pig.y -= pig.speed;
-        if (keys.left) { pig.x -= 2; }
+        if (keys.left)  { pig.x -= 2; }
         if (keys.right) { pig.x += 2; }
-        if (keys.up) { pig.y -= 2; }
-        if (keys.down) { pig.y += 2; }
+        if (keys.up)    { pig.y -= 2; }
+        if (keys.down)  { pig.y += 2; }
         if (pig.x < 0) { pig.x = 0; }
         if (pig.x > 1000) { pig.x = 1000; }
+
         if (pig.y < 0) {
+            // Off the top of the screen... you did it!
             nextLevel();
         }
     }
@@ -104,20 +128,12 @@ function runGame() {
         score++;
     }
 
-    function drawPig() {
-        ctx.drawImage(pigImage, pig.x - 32, pig.y - 32);        
-    }
-
     function updatePlane(plane) {
         plane.x -= 5;
     }
 
-    function cullPlanes() {
+    function cullOffscreenPlanes() {
         planes = planes.filter(plane => plane.x > 0);
-    }
-
-    function drawPlane(plane) {
-        ctx.drawImage(planeImage, plane.x - 32, plane.y - 16);        
     }
 
     function isHittingPig(plane) {
@@ -137,16 +153,36 @@ function runGame() {
     }
 
     function gameOver() {
-        clearInterval(spawner);
-        ctx.fillStyle = "red";
-        ctx.font = "40px Arial";
-        ctx.fillText("Game the fuck Over",300,200);
-        ctx.fillText("You scored " + score,350,280);
+        clearInterval(spawner); // Stop spawning planes
+        drawGameOverText();
+    }
+
+    //-----
+    // Drawing functions
+
+    function clear() {
+        ctx.fillStyle = "lightblue";
+        ctx.fillRect(0, 0, 1000, 600);
+    }
+
+    function drawPig() {
+        ctx.drawImage(pigImage, pig.x - 32, pig.y - 32);        
+    }
+
+    function drawPlane(plane) {
+        ctx.drawImage(planeImage, plane.x - 32, plane.y - 16);        
     }
 
     function drawScore() {
         ctx.fillStyle = "black";
         ctx.font = "30px Arial";
         ctx.fillText(score,10,50);
+    }
+
+    function drawGameOverText() {
+        ctx.fillStyle = "red";
+        ctx.font = "40px Arial";
+        ctx.fillText("Game the fuck Over",300,200);
+        ctx.fillText("You scored " + score,350,280);
     }
 }
