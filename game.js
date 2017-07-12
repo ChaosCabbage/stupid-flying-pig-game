@@ -12,7 +12,7 @@ function runGame() {
     const pig = {
         x: 484,
         y: 590,
-        speed: 2
+        speed: 5
     };
 
     let planes = [];
